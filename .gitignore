@@ -1,0 +1,38 @@
+# Build artifacts
+rust/target/
+web-ui/node_modules/
+web-ui/dist/
+
+# Database (created at runtime)
+*.db
+*.db-shm
+*.db-wal
+
+# Environment & secrets
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Session & cache data
+.claw/
+.sandbox-home/
+.sandbox-tmp/
+.claude/settings.local.json
+.claude/sessions/
+
+# Python cache
+__pycache__/
+
+# Misc
+archive/
+.omx/
+.clawd-agents/
+*.log

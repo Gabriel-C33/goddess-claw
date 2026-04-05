@@ -1,0 +1,29 @@
+[package]
+name = "goddess-claw-web"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "goddess-claw"
+path = "src/main.rs"
+
+[dependencies]
+api = { path = "../api" }
+runtime = { path = "../runtime" }
+tools = { path = "../tools" }
+plugins = { path = "../plugins" }
+axum = { version = "0.7", features = ["ws"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "process"] }
+serde = { version = "1", features = ["derive"] }
+serde_json.workspace = true
+tower-http = { version = "0.5", features = ["cors", "fs"] }
+uuid = { version = "1", features = ["v4"] }
+rusqlite = { version = "0.31", features = ["bundled"] }
+tokio-rusqlite = "0.5"
+reqwest = { version = "0.12", features = ["json"] }
+zip = "2"
+
+[lints]
+workspace = true

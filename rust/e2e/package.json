@@ -1,0 +1,23 @@
+{
+  "name": "claw-e2e-tests",
+  "version": "1.0.0",
+  "description": "End-to-end tests for Claw using Playwright",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:report": "playwright show-report",
+    "test:smoke": "playwright test --grep @smoke",
+    "install:deps": "npx playwright install --with-deps",
+    "codegen": "playwright codegen"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.0",
+    "@types/node": "^20.14.0"
+  },
+  "volta": {
+    "node": "20.14.0"
+  }
+}

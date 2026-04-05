@@ -1,0 +1,9 @@
+target/
+.omx/
+.clawd-agents/
+
+# E2E testing
+e2e/node_modules/
+e2e/playwright-report/
+e2e/test-results/
+e2e/package-lock.json
