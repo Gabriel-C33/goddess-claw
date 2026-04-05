@@ -8,7 +8,6 @@ import { FileExplorer } from '@/components/FileExplorer'
 import { SkillsExplorer } from '@/components/SkillsExplorer'
 import { Toaster } from '@/components/Toaster'
 import { MobileNav } from '@/components/MobileNav'
-import { WorkspaceGate } from '@/components/WorkspaceGate'
 
 function App() {
   const { isSidebarOpen, activeTool, fetchModels, loadSessionsFromBackend } = useChatStore()
@@ -20,7 +19,6 @@ function App() {
   }, [])
 
   return (
-    <WorkspaceGate>
     <div
       className="h-screen w-screen flex overflow-hidden"
       style={{ background: 'var(--bg)', color: 'var(--text)' }}
@@ -161,7 +159,6 @@ function App() {
       <ModelModal />
       <Toaster />
     </div>
-    </WorkspaceGate>
   )
 }
 

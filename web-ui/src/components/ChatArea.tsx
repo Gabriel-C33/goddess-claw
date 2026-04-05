@@ -13,12 +13,8 @@ import {
   Zap,
   Mic,
   MicOff,
-  FolderOpen,
-  FolderX,
-  HardDrive,
 } from 'lucide-react'
 import { useChatStore } from '@/stores/chatStore'
-import { useLocalFSStore } from '@/hooks/useLocalFS'
 import { cn } from '@/utils/cn'
 import { MessageList } from './MessageList'
 import { useWebSocket } from '@/hooks/useWebSocket'
@@ -47,8 +43,6 @@ export function ChatArea() {
 
   const { sendMessage, stopGeneration, isConnected, setModel: setBackendModel } = useWebSocket()
   const { isListening, toggleListening, hasSupport } = useVoice()
-  const { isActive: hasLocalFS, workspaceName, pickDirectory, closeWorkspace } = useLocalFSStore()
-  const supportsFS = typeof window !== 'undefined' && 'showDirectoryPicker' in window
 
   // Sync model with backend when it changes
   useEffect(() => {
@@ -133,32 +127,6 @@ export function ChatArea() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Workspace indicator */}
-          {supportsFS && (
-            hasLocalFS ? (
-              <button
-                onClick={closeWorkspace}
-                className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-md text-xs transition-all"
-                style={{ background: 'var(--green-bg)', border: '1px solid rgba(63,185,80,0.3)', color: 'var(--green-text)' }}
-                title="Local workspace active — click to disconnect"
-              >
-                <HardDrive className="w-3 h-3" />
-                <span className="max-w-[100px] truncate">{workspaceName}</span>
-                <FolderX className="w-3 h-3 opacity-60" />
-              </button>
-            ) : (
-              <button
-                onClick={pickDirectory}
-                className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-md text-xs transition-all"
-                style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
-                title="Open local workspace — AI will read/write files on THIS device"
-              >
-                <FolderOpen className="w-3 h-3" style={{ color: 'var(--accent-2)' }} />
-                <span>Open Workspace</span>
-              </button>
-            )
-          )}
-
           {/* Model indicator */}
           <div
             className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-md text-xs"
@@ -311,10 +279,8 @@ interface WelcomeScreenProps {
 
 function WelcomeScreen({ onSuggestion }: WelcomeScreenProps) {
   const { currentModel } = useChatStore()
-  const { isActive: hasLocalFS, workspaceName, pickDirectory } = useLocalFSStore()
   const [installPrompt, setInstallPrompt] = useState<any>(null)
   const [isInstalled, setIsInstalled] = useState(false)
-  const supportsFS = typeof window !== 'undefined' && 'showDirectoryPicker' in window
 
   // Capture PWA install prompt
   useEffect(() => {
@@ -449,29 +415,6 @@ function WelcomeScreen({ onSuggestion }: WelcomeScreenProps) {
           </span>
         )}
 
-        {supportsFS && !hasLocalFS && (
-          <button
-            onClick={pickDirectory}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-all"
-            style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              color: 'var(--text-muted)',
-            }}
-          >
-            <FolderOpen className="w-3.5 h-3.5" style={{ color: 'var(--accent-2)' }} />
-            Open Local Workspace
-          </button>
-        )}
-
-        {hasLocalFS && (
-          <span
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium"
-            style={{ background: 'var(--green-bg)', color: 'var(--green-text)', border: '1px solid rgba(63,185,80,0.3)' }}
-          >
-            <HardDrive className="w-3 h-3" /> Workspace: {workspaceName}
-          </span>
-        )}
       </motion.div>
     </motion.div>
   )

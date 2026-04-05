@@ -14,21 +14,11 @@ enum ClientMsg {
     #[serde(rename = "chat")]
     Chat {
         content: String,
-        /// When true, file tools are executed on the client (PWA) side
-        #[serde(default)]
-        local_fs: bool,
     },
     #[serde(rename = "set_model")]
     SetModel { model: String },
     #[serde(rename = "clear")]
     Clear,
-    /// Client sends back the result of a tool it executed locally
-    #[serde(rename = "tool_result")]
-    ToolResult {
-        id: String,
-        output: String,
-        is_error: bool,
-    },
 }
 
 #[derive(Serialize, Clone)]
@@ -42,9 +32,6 @@ enum ServerMsg {
     ToolStart { name: String, input: String },
     #[serde(rename = "tool_end")]
     ToolEnd { name: String, output: String, is_error: bool },
-    /// Ask the client to execute a tool locally (PWA mode)
-    #[serde(rename = "tool_request")]
-    ToolRequest { id: String, name: String, input: Value },
     #[serde(rename = "done")]
     Done,
     #[serde(rename = "error")]
@@ -56,13 +43,11 @@ enum ServerMsg {
 pub struct ConversationHandler {
     model: String,
     cwd: PathBuf,
-    /// When true, file tools are delegated to the client (PWA)
-    local_fs: bool,
 }
 
 impl ConversationHandler {
     pub fn new(model: String, cwd: PathBuf) -> Self {
-        Self { model, cwd, local_fs: false }
+        Self { model, cwd }
     }
 
     pub async fn run(mut self, mut socket: WebSocket) {
@@ -96,13 +81,9 @@ impl ConversationHandler {
                             send(&mut socket, &ServerMsg::Model { name: model }).await;
                         }
                         Ok(ClientMsg::Clear) => {}
-                        Ok(ClientMsg::Chat { content, local_fs }) => {
-                            self.local_fs = local_fs;
+                        Ok(ClientMsg::Chat { content, .. }) => {
                             send(&mut socket, &ServerMsg::Thinking).await;
                             self.handle_chat(&mut socket, content).await;
-                        }
-                        Ok(ClientMsg::ToolResult { .. }) => {
-                            // Handled inline during tool execution wait loop
                         }
                         Err(e) => {
                             send(&mut socket, &ServerMsg::Error { message: e.to_string() }).await;
@@ -251,21 +232,7 @@ impl ConversationHandler {
 
             let mut tool_results: Vec<InputContentBlock> = Vec::new();
             for (id, name, input) in &tool_uses {
-                let is_file_tool = matches!(name.as_str(), "read_file" | "write_file" | "delete_file" | "list_dir" | "search_files");
-
-                let (output, is_error) = if self.local_fs && is_file_tool {
-                    // Delegate to client — send request and wait for response
-                    send(socket, &ServerMsg::ToolRequest {
-                        id: id.clone(),
-                        name: name.clone(),
-                        input: input.clone(),
-                    }).await;
-
-                    // Wait for client to send back tool_result
-                    wait_for_tool_result(socket, id).await
-                } else {
-                    execute_tool(name, input, &self.cwd).await
-                };
+                let (output, is_error) = execute_tool(name, input, &self.cwd).await;
 
                 send(socket, &ServerMsg::ToolEnd {
                     name: name.clone(),
@@ -367,20 +334,7 @@ impl ConversationHandler {
                     input: serde_json::to_string(args).unwrap_or_default(),
                 }).await;
 
-                let is_file_tool = matches!(name.as_str(), "read_file" | "write_file" | "delete_file" | "list_dir" | "search_files");
-
-                let (output, is_error) = if self.local_fs && is_file_tool {
-                    // Delegate to client (PWA) — send request and wait for response
-                    let tool_id = format!("pi_{}_{}", name, _round);
-                    send(socket, &ServerMsg::ToolRequest {
-                        id: tool_id.clone(),
-                        name: name.clone(),
-                        input: args.clone(),
-                    }).await;
-                    wait_for_tool_result(socket, &tool_id).await
-                } else {
-                    execute_tool(name, args, &self.cwd).await
-                };
+                let (output, is_error) = execute_tool(name, args, &self.cwd).await;
 
                 send(socket, &ServerMsg::ToolEnd {
                     name: name.clone(),
@@ -890,29 +844,6 @@ fn system_prompt_with_injected_tools(cwd: &PathBuf) -> String {
          - Respond naturally in the non-tool parts of your message.",
         cwd = cwd.display()
     )
-}
-
-/// Wait for the client to respond with a tool_result for the given tool ID.
-/// Times out after 30 seconds.
-async fn wait_for_tool_result(socket: &mut WebSocket, tool_id: &str) -> (String, bool) {
-    let timeout = tokio::time::Duration::from_secs(30);
-    match tokio::time::timeout(timeout, async {
-        while let Some(Ok(msg)) = socket.recv().await {
-            if let Message::Text(text) = msg {
-                if let Ok(client_msg) = serde_json::from_str::<ClientMsg>(&text) {
-                    if let ClientMsg::ToolResult { id, output, is_error } = client_msg {
-                        if id == tool_id {
-                            return (output, is_error);
-                        }
-                    }
-                }
-            }
-        }
-        ("WebSocket closed while waiting for tool result".to_string(), true)
-    }).await {
-        Ok(result) => result,
-        Err(_) => ("Tool execution timed out (30s)".to_string(), true),
-    }
 }
 
 async fn send(socket: &mut WebSocket, msg: &ServerMsg) {

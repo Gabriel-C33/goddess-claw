@@ -1,7 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useChatStore } from '@/stores/chatStore'
-import { useLocalFSStore } from '@/hooks/useLocalFS'
-import { isRemoteDevice } from '@/utils/remote'
 import type { ToolCall } from '@/types'
 
 interface WebSocketMessage {
@@ -129,36 +127,6 @@ export function useWebSocket() {
         }
         break
 
-      case 'tool_request':
-        // Server asks us to execute a file tool locally (PWA mode)
-        {
-          const fs = useLocalFSStore.getState()
-          if (fs.isActive) {
-            fs.executeTool(msg.name, msg.input || {}).then(({ output, isError }) => {
-              // Send result back to server
-              if (wsRef.current?.readyState === WebSocket.OPEN) {
-                wsRef.current.send(JSON.stringify({
-                  type: 'tool_result',
-                  id: msg.id,
-                  output,
-                  is_error: isError,
-                }))
-              }
-            })
-          } else {
-            // No local FS — send error back
-            if (wsRef.current?.readyState === WebSocket.OPEN) {
-              wsRef.current.send(JSON.stringify({
-                type: 'tool_result',
-                id: msg.id,
-                output: 'No local workspace selected. Please open a workspace folder first.',
-                is_error: true,
-              }))
-            }
-          }
-        }
-        break
-
       case 'done':
         if (currentStreamingIdRef.current) {
           updateMessage(currentStreamingIdRef.current, { isStreaming: false, isThinking: false })
@@ -240,9 +208,7 @@ export function useWebSocket() {
       if (!state.currentSessionId) {
         state.createSession()
       }
-      // On remote devices, always use local FS mode (files on user's device)
-      const localFs = useLocalFSStore.getState().isActive || isRemoteDevice()
-      wsRef.current.send(JSON.stringify({ type: 'chat', content, local_fs: localFs }))
+      wsRef.current.send(JSON.stringify({ type: 'chat', content }))
       addMessage({
         role: 'user',
         content,

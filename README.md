@@ -39,7 +39,6 @@ Think of it as your own private **Cursor** or **Claude Code**, but:
 - Works with **any provider** — Ollama, Anthropic, OpenAI, xAI, Moonshot
 - Ships as a **single binary** with the UI embedded
 - Installs as a **PWA** — use it from your phone, tablet, or any device
-- When installed remotely, **file operations execute on the PWA device**, not the server
 
 <br>
 
@@ -109,8 +108,6 @@ Think of it as your own private **Cursor** or **Claude Code**, but:
 
 ### PWA & Remote Access
 - Installable as a Progressive Web App
-- **Remote filesystem**: when installed on a remote device, file tools execute on **that device** using the browser's File System Access API
-- Workspace gate: prompts remote users to pick a local folder
 - Works over Cloudflare Tunnel, ngrok, or any reverse proxy
 - WebSocket keepalive (15s ping) for stable connections through proxies
 
@@ -189,10 +186,6 @@ Cloud models appear in the model selector automatically when their API key is se
 │  React + Tailwind + Zustand + Framer Motion      │
 │  WebSocket ←→ REST API                           │
 │                                                   │
-│  ┌─────────────────────────────────────────────┐ │
-│  │  File System Access API (remote PWA only)   │ │
-│  │  Executes read/write/delete on THIS device  │ │
-│  └─────────────────────────────────────────────┘ │
 └───────────────────┬──────────────────────────────┘
                     │ WebSocket (ws/wss)
                     │
@@ -215,13 +208,8 @@ Cloud models appear in the model selector automatically when their API key is se
 │  │       ▼           ▼                      │    │
 │  │  ┌─────────────────────┐                 │    │
 │  │  │   Tool Execution    │                 │    │
-│  │  │   local_fs? ──┐     │                 │    │
-│  │  │     yes: send │     │                 │    │
-│  │  │     tool_req  │     │                 │    │
-│  │  │     to client │     │                 │    │
-│  │  │     no: exec  │     │                 │    │
-│  │  │     on server │     │                 │    │
-│  │  └───────────────┘     │                 │    │
+│  │  │   (server-side)     │                 │    │
+│  │  └─────────────────────┘                 │    │
 │  └────────────────────────┘                 │    │
 │                                              │    │
 │  ┌──────────┐  ┌──────────────────────────┐  │    │
@@ -241,19 +229,6 @@ GoddessClaw automatically detects how each model handles tools:
 | **Native** | Claude, GPT-4o, Grok, Llama3, Qwen2.5, Phi4, Mistral | Uses the model's built-in function calling API |
 | **Prompt Injection** | Older Ollama models, CodeQwen, etc. | Injects tool schemas into the system prompt, parses `<tool_call>` tags from output |
 | **No Tools** | Tiny/old models | Plain conversation, no filesystem access |
-
-### Remote Filesystem Protocol
-
-When a PWA user on a remote device selects a workspace folder:
-
-```
-1. Client sends:  { type: "chat", content: "...", local_fs: true }
-2. Server detects file tool needed
-3. Server sends:  { type: "tool_request", id: "...", name: "write_file", input: {...} }
-4. Client executes via File System Access API on local device
-5. Client sends:  { type: "tool_result", id: "...", output: "...", is_error: false }
-6. Server continues conversation with the result
-```
 
 <br>
 
@@ -291,15 +266,7 @@ Known low-quality models (embedding models, tiny models, llama2) are automatical
 1. Open `http://your-server:8989` in Chrome/Edge
 2. Click "Install App" in the welcome screen (or use browser's install button)
 3. The app works offline for the UI, connects to your server for AI
-
-### Remote Device File Access
-
-When you install the PWA on a device different from the server:
-
-1. **Workspace Gate** appears asking you to pick a folder
-2. Pick any folder on your device — the AI will read/write files **there**
-3. All file tools (`read_file`, `write_file`, etc.) execute locally via the File System Access API
-4. `run_command` still executes on the server (shell access requires the host)
+4. All file operations execute on the server machine
 
 ### Exposing to the Internet
 
@@ -350,11 +317,9 @@ goddess-claw/
 │   │   │   ├── ModelModal.tsx      # Model selector
 │   │   │   ├── FileExplorer.tsx    # File tree panel
 │   │   │   ├── SkillsExplorer.tsx  # 300+ prompt templates
-│   │   │   ├── WorkspaceGate.tsx   # Remote workspace picker
 │   │   │   └── ...
 │   │   ├── hooks/
-│   │   │   ├── useWebSocket.ts     # WebSocket client, tool delegation
-│   │   │   ├── useLocalFS.ts       # File System Access API
+│   │   │   ├── useWebSocket.ts     # WebSocket client
 │   │   │   └── useVoice.ts         # Speech recognition
 │   │   ├── stores/
 │   │   │   └── chatStore.ts        # Zustand state management
@@ -380,7 +345,7 @@ goddess-claw/
 | **Animations** | Framer Motion |
 | **Database** | SQLite (rusqlite, WAL mode) |
 | **Streaming** | Server-Sent Events, WebSocket |
-| **PWA** | Service Worker, Web App Manifest, File System Access API |
+| **PWA** | Service Worker, Web App Manifest |
 | **Syntax** | highlight.js |
 
 <br>
