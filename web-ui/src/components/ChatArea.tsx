@@ -43,7 +43,6 @@ export function ChatArea() {
 
   const { sendMessage, stopGeneration, isConnected, setModel: setBackendModel } = useWebSocket()
   const { isListening, toggleListening, hasSupport } = useVoice()
-
   // Sync model with backend when it changes
   useEffect(() => {
     if (isConnected) {
